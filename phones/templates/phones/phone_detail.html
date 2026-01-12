@@ -4,9 +4,9 @@
     <title>{{ phone.name }}</title>
 </head>
 <body>
-    <h1>{{ phone.name }}</h1>
+    <h1>{{phone.name}}</h1>
     <img src="{{ phone.image }}" alt="{{ phone.name }}" width="200">
-    <p>Цена: {{ phone.price }}</p>
+    <p>Цена: {{phone.price}}</p>
     <p>Дата выпуска: {{ phone.release_date }}</p>
     <p>Поддержка LTE: {% if phone.lte_exists %}Да{% else %}Нет{% endif %}</p>
     <p><strong>Slug:</strong> {{ phone.slug }}</p>

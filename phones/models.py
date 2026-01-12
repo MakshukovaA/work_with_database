@@ -1,11 +1,8 @@
-# phones/models.py
 from django.db import models
 from django.utils.text import slugify
 
 
 class Phone(models.Model):
-    objects:  None = None
-    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     image = models.URLField()
@@ -20,7 +17,3 @@ class Phone(models.Model):
     def __str__(self):
         return self.name
 
-
-from django.db import models
-
-# Create your models here.
