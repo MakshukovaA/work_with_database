@@ -21,6 +21,12 @@ class Command(BaseCommand):
             with open(csv_file_path, encoding='utf-8') as file:
                 reader = csv.DictReader(f, delimiter=';')
                 for row in reader:
+                    pk = None
+                    if row.get('id'):
+                        try:
+                            pk = int(row['id'])
+                        except (TypeError, ValueError):
+                            pk = None
                     name = (row.get('name') or '').strip()
                     image = (row.get('image') or row.get('image_url') or '').strip()
                     price_str = row.get('price') or '0'
@@ -39,17 +45,29 @@ class Command(BaseCommand):
                     if release_date_str:
                         release_date = parse_date(release_date_str)
 
-                    is_active = str(lte_exists_str).strip().lower() in ('true', '1', 'yes', 'y', 'on')
+                    lte_exists = str(lte_exists_str).strip().lower() in ('true', '1', 'yes', 'y', 'on')
 
-                    Phone.objects.update_or_create(
-                        name=name,
-                        defaults={
-                            'image': image,
-                            'price': price,
-                            'release_date': release_date,
-                            'lte_exists': is_active,
-                        }
-                    )
+                    if pk is not None:
+                        obj, created = Phone.objects.update_or_create(
+                            id=pk,
+                            defaults={
+                                'name': name,
+                                'image': image,
+                                'price': price,
+                                'release_date': release_date,
+                                'lte_exists': lte_exists,
+                            }
+                        )
+                    else:
+                        obj, created = Phone.objects.update_or_create(
+                            name=name,
+                            defaults={
+                                'image': image,
+                                'price': price,
+                                'release_date': release_date,
+                                'lte_exists': lte_exists,
+                            }
+                        )
                     count += 1
 
                 self.stdout.write(self.style.SUCCESS(
