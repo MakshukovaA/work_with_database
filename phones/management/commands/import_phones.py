@@ -5,12 +5,13 @@ from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_date
 from decimal import Decimal
 from phones.models import Phone
+from django.utils.text import slugify
 
 class Command(BaseCommand):
     help = 'Imports phones from a CSV file.'
 
     def handle(self, *args, **options):
-        csv_file_path = os.path.join(settings.BASE_DIR, 'phones.csv')
+        csv_file_path = settings.PHONES_CSV_PATH
 
         if not os.path.exists(csv_file_path):
             self.stderr.write(self.style.ERROR('CSV file not found: %s' % csv_file_path))
@@ -18,8 +19,8 @@ class Command(BaseCommand):
 
         count = 0
         try:
-            with open(csv_file_path, encoding='utf-8') as file:
-                reader = csv.DictReader(f, delimiter=';')
+            with open(csv_file_path, newline='', encoding='utf-8') as file:
+                reader = csv.DictReader(file, delimiter=';')
                 for row in reader:
                     pk = None
                     if row.get('id'):
@@ -27,6 +28,7 @@ class Command(BaseCommand):
                             pk = int(row['id'])
                         except (TypeError, ValueError):
                             pk = None
+
                     name = (row.get('name') or '').strip()
                     image = (row.get('image') or row.get('image_url') or '').strip()
                     price_str = row.get('price') or '0'
@@ -47,6 +49,15 @@ class Command(BaseCommand):
 
                     lte_exists = str(lte_exists_str).strip().lower() in ('true', '1', 'yes', 'y', 'on')
 
+                    # Генерация slug и обеспечение уникальности
+                    base_slug = slugify(name)
+                    slug_value = base_slug
+                    i = 1
+                    # Простой режим: если редактируем запись с pk, исключаем её из проверки уникальности
+                    while Phone.objects.filter(slug=slug_value).exclude(pk=pk).exists():
+                        slug_value = f"{base_slug}-{i}"
+                        i += 1
+
                     if pk is not None:
                         obj, created = Phone.objects.update_or_create(
                             id=pk,
@@ -56,6 +67,7 @@ class Command(BaseCommand):
                                 'price': price,
                                 'release_date': release_date,
                                 'lte_exists': lte_exists,
+                                'slug': slug_value,
                             }
                         )
                     else:
@@ -66,14 +78,16 @@ class Command(BaseCommand):
                                 'price': price,
                                 'release_date': release_date,
                                 'lte_exists': lte_exists,
+                                'slug': slug_value,
                             }
                         )
                     count += 1
 
-                self.stdout.write(self.style.SUCCESS(
-                    'Successfully imported %d phones from %s' % (count, csv_file_path)
-                ))
-                except FileNotFoundError:
-                self.stderr.write(self.style.ERROR('Error: The file "%s" was not found.' % csv_file_path))
-            except Exception as e:
+        except FileNotFoundError:
+            self.stderr.write(self.style.ERROR('Error: The file "%s" was not found.' % csv_file_path))
+        except Exception as e:
             self.stderr.write(self.style.ERROR('An error occurred: %s' % str(e)))
+        else:
+            self.stdout.write(self.style.SUCCESS(
+                'Successfully imported %d phones from %s' % (count, csv_file_path)
+            ))
